@@ -11,7 +11,7 @@ def get_historical_data():
 
     try:
         # Read the data from the CSV file
-        historical_data = pd.read_csv(file_path)
+        historical_data = pd.read_csv(file_path, engine='python')
         return historical_data
     except FileNotFoundError:
         print("Error: The historical_data.csv file was not found.")
@@ -19,6 +19,7 @@ def get_historical_data():
     except Exception as e:
         print(f"Error: Failed to read historical data from CSV file. {e}")
         return None
+
 
 
 def get_current_bitcoin_price():

@@ -1,3 +1,4 @@
+# analysis\evaluation_function.py
 import pandas as pd
 import os
 
@@ -49,3 +50,8 @@ def get_last_percentage_change():
     last_line = lines[-2].strip()
     previous_percentage_change = float(last_line.split(' ')[1])
     return previous_percentage_change
+
+
+if __name__ == '__main__':
+    evaluate_performance()
+    get_last_percentage_change()

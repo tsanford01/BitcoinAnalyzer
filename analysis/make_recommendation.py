@@ -1,5 +1,6 @@
+# analysis\make_recommendation.py
 import requests
-import datetime
+
 from analysis.evaluate_recommendation import evaluate_recommendation
 
 
@@ -28,7 +29,7 @@ def get_market_sentiment():
 
 def make_recommendation():
     try:
-        # evaluate the most recent recommendation
+        # Evaluate the most recent recommendation
         result, error = evaluate_recommendation()
         if error is not None:
             return None, error
@@ -50,19 +51,32 @@ def make_recommendation():
         long_term_trend = get_price_trend(7)
         # get the market sentiment
         sentiment = get_market_sentiment()
-        # use the information to make a recommendation
+
+        # Calculate the confidence level based on percentage change, long-term trend, and market sentiment
+        confidence_level = abs(percentage_change) + abs(long_term_trend) + sentiment
+        confidence_level = min(confidence_level, 100)  # Cap the confidence level at 100
+
+        # Define arbitrary confidence levels for the examples
+        high_confidence = 85
+        low_confidence = 50
+
+        # Use the information to make a recommendation
         if percentage_change > 5 and long_term_trend > 2 and sentiment > 60:
-            return ({
-                        'message': f'Bitcoin price has increased by {percentage_change:.2f}% since the last recommendation, long-term trend is {long_term_trend:.2f}% positive, and market sentiment is {sentiment:.2f}% positive. It is recommended to sell.'},
-                    None)
+            message = (f'Bitcoin price has increased by {percentage_change:.2f}% since the last recommendation, '
+                       f'long-term trend is {long_term_trend:.2f}% positive, and market sentiment is {sentiment:.2f}% '
+                       f'positive. It is recommended to sell.')
+            confidence_level = high_confidence
         elif percentage_change < -5 and long_term_trend < -2 and sentiment < 40:
-            return ({
-                        'message': f'Bitcoin price has decreased by {abs(percentage_change):.2f}% since the last '
-                                   f'recommendation, long-term trend is {long_term_trend:.2f}% negative, and market '
-                                   f'sentiment is {sentiment:.2f}% negative. It is recommended to buy.'},
-                    None)
+            message = (f'Bitcoin price has decreased by {abs(percentage_change):.2f}% since the last recommendation, '
+                       f'long-term trend is {long_term_trend:.2f}% negative, and market sentiment is {sentiment:.2f}% '
+                       f'negative. It is recommended to buy.')
+            confidence_level = high_confidence
         else:
-            return {'message': 'No significant change in Bitcoin price since the last recommendation.'}, None
+            message = 'No significant change in Bitcoin price since the last recommendation.'
+            confidence_level = low_confidence
+
+        # Return a dictionary containing both the message and the confidence level
+        return {'message': message, 'confidence_level': confidence_level}, None
     except Exception as e:
         return {'message': f'Error: {e}'}, None
 

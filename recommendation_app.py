@@ -1,13 +1,12 @@
+# recommendation_app.py
+import csv
 import tkinter as tk
-from tkinter import ttk
+from datetime import datetime
 from threading import Thread
-from datetime import datetime, timedelta
-import time
-import os
-import pandas as pd
+from tkinter import ttk
+
 import analysis_module as analysis_module  # You may need to update this import
 from utils.data_retrieval import get_current_bitcoin_price, get_historical_data
-import csv
 
 current_datetime = datetime.now()
 
@@ -16,79 +15,99 @@ class RecommendationApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Bitcoin Recommendation Tool")
-        self.root.geometry("600x500")
+        self.root.geometry("1200x600")
         self.is_running = False
 
         # Initialize default update frequencies (in seconds)
         self.update_price_frequency = 10
         self.analysis_loop_frequency = 60
 
-        # Start the update_current_price and analysis_loop with default frequencies
-        self.update_price_schedule = self.root.after(self.update_price_frequency * 1000, self.update_current_price)
-        self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 1000, self.analysis_loop)
-
         # Create a StringVar instance to hold the current Bitcoin price text
         self.current_price_text = tk.StringVar()
 
-        self.header = tk.Label(self.root, text="Bitcoin Recommendation Tool", font=("Helvetica", 16))
-        self.header.pack(pady=10)
+        # Main frame to hold all elements
+        self.main_frame = tk.Frame(self.root, padx=10, pady=10)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Create a Label widget to display the current Bitcoin price
-        self.current_price_label = tk.Label(self.root, textvariable=self.current_price_text, font=("Helvetica", 12))
-        self.current_price_label.pack(pady=10)
+        # Header frame and label
+        self.header_frame = tk.Frame(self.main_frame)
+        self.header_frame.pack(fill=tk.X, pady=(0, 20))
+        self.header = tk.Label(self.header_frame, text="Bitcoin Recommendation Tool", font=("Helvetica", 16))
+        self.header.pack()
 
-        # List to store past recommendations
-        self.past_recommendations = []
+        # Current price frame and label
+        self.current_price_frame = tk.Frame(self.main_frame)
+        self.current_price_frame.pack(fill=tk.X)
+        self.current_price_label = tk.Label(self.current_price_frame, textvariable=self.current_price_text,
+                                            font=("Helvetica", 12))
+        self.current_price_label.pack()
 
-        # start analysis button
-        self.start_button = tk.Button(self.root, text="Start Analysis", command=self.start_analysis)
-        self.start_button.pack(pady=10)
+        # Create a progress bar to visualize the countdown
+        self.progress_bar = ttk.Progressbar(self.main_frame, mode='determinate', length=300,
+                                            maximum=self.analysis_loop_frequency)
+        self.progress_bar.pack(pady=(10, 5))
 
-        # Stop Analysis Button
-        self.stop_button = tk.Button(self.root, text="Stop Analysis", command=self.stop_analysis)
-        self.stop_button.pack(pady=10)
+        # Label to display remaining time
+        self.remaining_time_label = tk.Label(self.main_frame, font=("Helvetica", 12))
+        self.remaining_time_label.pack(pady=(5, 15))
+
+        # Buttons frame
+        self.buttons_frame = tk.Frame(self.main_frame)
+        self.buttons_frame.pack(fill=tk.X, pady=(0, 20))
+
+        # Start analysis button
+        self.start_button = tk.Button(self.buttons_frame, text="Start Analysis", command=self.start_analysis)
+        self.start_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Stop analysis button
+        self.stop_button = tk.Button(self.buttons_frame, text="Stop Analysis", command=self.stop_analysis)
+        self.stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Button to view history
-        self.history_button = tk.Button(self.root, text="View History", command=self.view_history)
-        self.history_button.pack(pady=10)
-
-        # Load past recommendations from file
-        self.load_recommendations()
+        self.history_button = tk.Button(self.buttons_frame, text="View History", command=self.view_history)
+        self.history_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Button to evaluate performance
-        self.evaluate_button = tk.Button(self.root, text="Evaluate Performance",
-                                         command=self.evaluate_performance_wrapper)  # Update here
-        self.evaluate_button.pack(pady=10)
+        self.evaluate_button = tk.Button(self.buttons_frame, text="Evaluate Performance",
+                                         command=self.evaluate_performance_wrapper)
+        self.evaluate_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        # settings button
-        self.settings_button = tk.Button(self.root, text="Settings", command=self.open_settings_window)
-        self.settings_button.pack(pady=10)
+        # Settings button
+        self.settings_button = tk.Button(self.buttons_frame, text="Settings", command=self.open_settings_window)
+        self.settings_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Label to display sentiment indicator
+        self.sentiment_indicator = tk.Label(self.main_frame, font=("Helvetica", 14))
+        self.sentiment_indicator.pack(pady=(10, 5))
+
+        # Label to display recommendation
+        self.recommendation_text = tk.StringVar()
+        self.recommendation_label = tk.Label(self.main_frame, textvariable=self.recommendation_text,
+                                             font=("Helvetica", 14))
+        self.recommendation_label.pack(pady=(5, 5))
+
+        # Status frame and label
+        self.status_frame = tk.Frame(self.main_frame)
+        self.status_frame.pack(fill=tk.X, pady=(20, 0))
+        self.status_text = tk.StringVar()
+        self.status_label = tk.Label(self.status_frame, textvariable=self.status_text, font=("Helvetica", 12))
+        self.status_label.pack()
+
+        # Create a frame to display the history at the bottom of the main window
+        self.history_frame = tk.Frame(self.main_frame)
+        self.history_frame.pack(fill=tk.BOTH, pady=10, expand=True)
+
+        # Initialize past_recommendations as an empty list
+        self.past_recommendations = []
 
         # Update the current Bitcoin price and display it
         self.update_current_price()
 
-        # Label to display sentiment indicator
-        self.sentiment_indicator = tk.Label(self.root, font=("Helvetica", 14))
-        self.sentiment_indicator.pack(pady=10)
-
         # Initialize remaining time to 1 minutes (60 seconds)
         self.remaining_time = 60
 
-        # Create a progress bar to visualize the countdown
-        self.progress_bar = ttk.Progressbar(self.root, mode='determinate', length=300, maximum=self.remaining_time)
-        self.progress_bar.pack(pady=10)
-
-        # Label to display remaining time
-        self.remaining_time_label = tk.Label(self.root, font=("Helvetica", 12))
-        self.remaining_time_label.pack(pady=10)
-
-        self.recommendation_text = tk.StringVar()
-        self.recommendation_label = tk.Label(self.root, textvariable=self.recommendation_text, font=("Helvetica", 14))
-        self.recommendation_label.pack(pady=10)
-
-        self.status_text = tk.StringVar()
-        self.status_label = tk.Label(self.root, textvariable=self.status_text, font=("Helvetica", 12))
-        self.status_label.pack(pady=10)
+        # Start the countdown update
+        self.update_countdown()
 
     # Wrapper function to call evaluate_performance and handle results
     def update_current_price(self):
@@ -110,6 +129,9 @@ class RecommendationApp:
         # Start the analysis loop in a separate thread
         analysis_thread = Thread(target=self.analysis_loop)
         analysis_thread.start()
+        # Schedule the update_current_price and analysis_loop with the user-defined frequency
+        self.update_price_schedule = self.root.after(self.update_price_frequency * 1000, self.update_current_price)
+        self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 1000, self.analysis_loop)
 
     def stop_analysis(self):
         # Set the running flag to False to stop the analysis loop
@@ -117,18 +139,18 @@ class RecommendationApp:
         self.status_text.set("Analysis stopped.")
 
     def view_history(self):
-        # Create a new window for history
-        history_window = tk.Toplevel(self.root)
-        history_window.title("Recommendation History")
+        # Clear the history frame before displaying the history
+        for widget in self.history_frame.winfo_children():
+            widget.destroy()
 
-        # Label for the history window
-        history_label = tk.Label(history_window, text="Recommendation History", font=("Helvetica", 14))
-        history_label.pack(pady=10)
-
-        # Display the past recommendations
+        # Display the past recommendations in the history frame
         for recommendation in self.past_recommendations:
-            recommendation_label = tk.Label(history_window, text=f"{recommendation[0]} - {recommendation[1]}")
+            recommendation_label = tk.Label(self.history_frame, text=f"{recommendation[0]} - {recommendation[1]}")
             recommendation_label.pack()
+
+        # Scroll to the bottom of the history frame to show the latest recommendations
+        self.root.update()
+        self.root.yview_moveto(1)
 
     def update_sentiment_indicator(self, sentiment):
         if sentiment == 'bullish':
@@ -170,11 +192,21 @@ class RecommendationApp:
             # Use evaluation_function to evaluate historical data and calculate indicators
             indicators = analysis_module.evaluate_performance(historical_data)
 
-            # Use make_recommendation to generate a recommendation based on indicators
-            recommendation = analysis_module.make_recommendation(indicators)
+            # Call the make_recommendation function and get the recommendation and error (if any)
+            recommendation, error = analysis_module.make_recommendation()
 
-            # Evaluate the recommendation using the entire recommendation dictionary
-            evaluation = analysis_module.evaluate_recommendation(recommendation, historical_data)
+            # Retrieve the confidence level from the recommendation
+            confidence_level = recommendation.get('confidence_level')
+
+            # Check if there is an error
+            if error is not None:
+                # Print the error message to the console
+                print("Error:", error)
+                # Display the error message in the UI
+                self.status_text.set(error)
+                return
+
+            evaluation = analysis_module.evaluate_recommendation(recommendation, confidence_level)
 
             # Use track_performance to track the performance of the recommendations
             analysis_module.track_performance(evaluation, self.past_recommendations)
@@ -189,7 +221,7 @@ class RecommendationApp:
             self.update_sentiment_indicator(sentiment)
 
             # Schedule the next update based on the user-defined frequency
-            self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 1000, self.analysis_loop)
+            self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 100, self.analysis_loop)
 
     # Wrapper function to call evaluate_performance and handle results
     def evaluate_performance_wrapper(self):
@@ -249,17 +281,23 @@ class RecommendationApp:
         save_button = tk.Button(settings_window, text="Save", command=self.save_settings)
         save_button.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W + tk.E)
 
+    def start_analysis(self):
+        # Set the running flag to True
+        self.is_running = True
+        self.status_text.set("Analysis started.")
+        # Start the analysis loop in a separate thread
+        analysis_thread = Thread(target=self.analysis_loop)
+        analysis_thread.start()
+        # Start the update_current_price with the user-defined frequency
+        self.update_price_schedule = self.root.after(self.update_price_frequency * 100, self.update_current_price)
+
     def stop_analysis(self):
-        # ...
+        # Set the running flag to False to stop the analysis loop
+        self.is_running = False
+        self.status_text.set("Analysis stopped.")
         # Cancel the scheduled updates when stopping the analysis
         self.root.after_cancel(self.update_price_schedule)
         self.root.after_cancel(self.analysis_loop_schedule)
-
-    def start_analysis(self):
-        # ...
-        # Start the update_current_price and analysis_loop with the user-defined frequency
-        self.update_price_schedule = self.root.after(self.update_price_frequency * 1000, self.update_current_price)
-        self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 1000, self.analysis_loop)
 
     def save_settings(self):
         try:
@@ -290,9 +328,7 @@ if __name__ == "__main__":
     app = RecommendationApp(root)
 
     # Start the countdown update
-    app.update_countdown()
-
-    root.mainloop()
+    # app.update_countdown()
 
     # Define the on_close behavior
     root.protocol("WM_DELETE_WINDOW", app.on_close)

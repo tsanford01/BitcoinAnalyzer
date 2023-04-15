@@ -1,3 +1,4 @@
+# analysis\evaluate_recommendation.py
 import datetime
 import requests
 import pandas as pd
@@ -8,6 +9,7 @@ import dateutil.parser
 
 def get_actual_price_changes(start_date, end_date):
     # Convert start_date and end_date to UNIX timestamps
+    global actual_price_changes
     start_timestamp = int(datetime.strptime(start_date, '%Y-%m-%d').timestamp())
     end_timestamp = int(datetime.strptime(end_date, '%Y-%m-%d').timestamp())
 
@@ -17,7 +19,7 @@ def get_actual_price_changes(start_date, end_date):
     # Check if the file exists and is not empty
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         # Read the data from the CSV file
-        actual_price_changes = pd.read_csv(file_path)
+        actual_price_changes = pd.read_csv(file_path, engine='python')
 
         # Check if the data contains the desired date range
         min_timestamp = actual_price_changes['timestamp'].min()
@@ -64,11 +66,13 @@ def get_actual_price_changes(start_date, end_date):
 try:
     file_path = 'data/historical_data.csv'
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        existing_data = pd.read_csv(file_path)
+        # Use the 'python' engine when reading the CSV file
+        existing_data = pd.read_csv(file_path, engine='python')
         if not existing_data['timestamp'].empty:
             last_date_in_existing_data = existing_data['timestamp'].max()
             try:
-                start_date = (datetime.fromtimestamp(last_date_in_existing_data) + timedelta(days=1)).strftime('%Y-%m-%d')
+                start_date = (datetime.fromtimestamp(last_date_in_existing_data) + timedelta(days=1)).strftime(
+                    '%Y-%m-%d')
             except (OSError, ValueError):
                 # Fallback mechanism: If the timestamp is invalid, go back 30 days
                 end_date = datetime.now()
@@ -98,7 +102,7 @@ actual_price_changes = get_actual_price_changes(start_date, end_date)
 print(actual_price_changes)
 
 
-def evaluate_recommendation(recommendation, actual_price_changes):
+def evaluate_recommendation(recommendation, confidence_level):
     try:
         # Define the file path for the recommendations.txt file (including the 'data' directory)
         recommendations_file_path = 'data/recommendations.txt'
@@ -115,8 +119,7 @@ def evaluate_recommendation(recommendation, actual_price_changes):
         # get the current Bitcoin price
         current_price = \
             requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').json()[
-                'bitcoin'][
-                'usd']
+                'bitcoin']['usd']
         # get the Bitcoin price at the time of the recommendation
         one_hour_ago = (date - datetime.timedelta(hours=1)).strftime('%s')
         historical_data = requests.get(f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range'
@@ -129,6 +132,6 @@ def evaluate_recommendation(recommendation, actual_price_changes):
             file.write(f'{date} {percentage_change:.2f} {recommendation_str}')
 
         return {
-            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent.'}, None
+            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent. Confidence Level: {confidence_level:.2f}%.'}, None
     except Exception as e:
         return {"message": "Error: {}".format(str(e))}, None
