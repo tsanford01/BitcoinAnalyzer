@@ -18,7 +18,7 @@ The Bitcoin Recommendation Tool is a graphical user interface (GUI) application 
 3. Ensure you have Python 3 and the required libraries (Tkinter, pandas, requests) installed.
 
 ## Usage
-1. Run the `recommendation_app.py` script to start the application.
+1. Run the `main.py` script to start the application.
 2. The main window will open, displaying the current Bitcoin price and analysis results.
 3. Use the available buttons to start/stop analysis, view recommendation history, evaluate performance, and access settings.
 4. The "Start Analysis" button starts the analysis loop, generating recommendations based on Bitcoin price data.
