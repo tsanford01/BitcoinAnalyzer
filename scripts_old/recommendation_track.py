@@ -23,7 +23,7 @@ def track_performance():
             last_cost = float(last_trade[4])
             last_profit_loss = float(last_trade[-1])
             # get the percentage change since the last recommendation
-            with open('recommendation_evaluations.txt', 'r') as file:
+            with open('data/recommendation_evaluations.txt', 'r') as file:
                 lines = file.readlines()
                 if len(lines) < 2:
                     continue

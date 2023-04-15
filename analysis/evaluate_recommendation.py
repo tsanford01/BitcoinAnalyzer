@@ -5,6 +5,7 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 import dateutil.parser
+import time
 
 
 def get_actual_price_changes(start_date, end_date):
@@ -37,14 +38,22 @@ def get_actual_price_changes(start_date, end_date):
                 "from": start_timestamp,
                 "to": end_timestamp
             }
-            response = requests.get(url, params=params)
-            if response.ok:
-                data = response.json()
-                new_data = pd.DataFrame(data.get("prices", []), columns=['timestamp', 'price'])
+            while True:
+                response = requests.get(url, params=params)
+                # Handle rate limiting (status code 429)
+                if response.status_code == 429:
+                    time.sleep(60)  # Wait for 60 seconds before retrying
+                    continue
+                if response.ok:
+                    data = response.json()
+                    new_data = pd.DataFrame(data.get("prices", []), columns=['timestamp', 'price'])
 
-                # Append new_data to actual_price_changes and drop duplicates
-                actual_price_changes = pd.concat([actual_price_changes, new_data]).drop_duplicates()
-                actual_price_changes.to_csv(file_path, index=False)
+                    # Append new_data to actual_price_changes and drop duplicates
+                    actual_price_changes = pd.concat([actual_price_changes, new_data]).drop_duplicates()
+                    actual_price_changes.to_csv(file_path, index=False)
+                    break
+                else:
+                    raise Exception(f"Error: Received status code {response.status_code} from API.")
     else:
         # Fetch data from the API and save it to the file
         url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range"
@@ -53,11 +62,19 @@ def get_actual_price_changes(start_date, end_date):
             "from": start_timestamp,
             "to": end_timestamp
         }
-        response = requests.get(url, params=params)
-        if response.ok:
-            data = response.json()
-            actual_price_changes = pd.DataFrame(data.get("prices", []), columns=['timestamp', 'price'])
-            actual_price_changes.to_csv(file_path, index=False)
+        while True:
+            response = requests.get(url, params=params)
+            # Handle rate limiting (status code 429)
+            if response.status_code == 429:
+                time.sleep(60)  # Wait for 60 seconds before retrying
+                continue
+            if response.ok:
+                data = response.json()
+                actual_price_changes = pd.DataFrame(data.get("prices", []), columns=['timestamp', 'price'])
+                actual_price_changes.to_csv(file_path, index=False)
+                break
+            else:
+                raise Exception(f"Error: Received status code {response.status_code} from API.")
 
     return actual_price_changes
 
@@ -99,39 +116,50 @@ end_date = datetime.now().strftime('%Y-%m-%d')
 
 # Fetch data using the selected start and end dates
 actual_price_changes = get_actual_price_changes(start_date, end_date)
-print(actual_price_changes)
+# print(actual_price_changes)
 
 
-def evaluate_recommendation(recommendation, confidence_level):
+def evaluate_recommendation(current_price):
     try:
         # Define the file path for the recommendations.txt file (including the 'data' directory)
         recommendations_file_path = 'data/recommendations.txt'
         evaluations_file_path = 'data/recommendation_evaluations.txt'
 
-        # get the most recent recommendation from our file
+        # Get the most recent recommendation from our file
         with open(recommendations_file_path, 'r') as file:
             lines = file.readlines()
             last_line = lines[-1].strip()
-        # extract the date and the recommendation from the line
+        # Extract the date and the recommendation from the line
         date_str, recommendation_str = last_line.split('Bitcoin price has', 1)
         recommendation_str = 'Bitcoin price has' + recommendation_str
         date = dateutil.parser.parse(date_str.strip())
-        # get the current Bitcoin price
-        current_price = \
-            requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').json()[
-                'bitcoin']['usd']
-        # get the Bitcoin price at the time of the recommendation
+
+        # Get the Bitcoin price at the time of the recommendation
         one_hour_ago = (date - datetime.timedelta(hours=1)).strftime('%s')
-        historical_data = requests.get(f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range'
-                                       f'?vs_currency=usd&from={one_hour_ago}&to=9999999999').json()
-        opening_price = historical_data['prices'][0][1]
-        # calculate the percentage change
+        while True:
+            response = requests.get(f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range'
+                                    f'?vs_currency=usd&from={one_hour_ago}&to=9999999999')
+            # Handle rate limiting (status code 429)
+            if response.status_code == 429:
+                time.sleep(60)  # Wait for 60 seconds before retrying
+                continue
+            if response.ok:
+                historical_data = response.json()
+                opening_price = historical_data['prices'][0][1]
+                break
+            else:
+                raise Exception(f"Error: Received status code {response.status_code} from API.")
+
+        # Calculate the percentage change
         percentage_change = (current_price - opening_price) / opening_price * 100
-        # save the result to a file
+
+        # Save the result to a file
         with open(evaluations_file_path, 'a') as file:
             file.write(f'{date} {percentage_change:.2f} {recommendation_str}')
 
         return {
-            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent. Confidence Level: {confidence_level:.2f}%.'}, None
+            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent.'}, None
     except Exception as e:
         return {"message": "Error: {}".format(str(e))}, None
+
+

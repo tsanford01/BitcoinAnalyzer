@@ -26,7 +26,7 @@ def evaluate_performance():
 
 def get_last_percentage_change():
     # Get the percentage change since the last recommendation
-    with open('recommendation_evaluations.txt', 'r') as file:
+    with open('data/recommendation_evaluations.txt', 'r') as file:
         lines = file.readlines()
     if len(lines) < 2:
         return 0.0

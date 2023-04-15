@@ -11,7 +11,7 @@ def make_recommendation():
         # get the current price of Bitcoin
         current_price = requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').json()['bitcoin']['usd']
         # get the percentage change since the last recommendation
-        with open('recommendation_evaluations.txt', 'r') as file:
+        with open('data/recommendation_evaluations.txt', 'r') as file:
             lines = file.readlines()
             if len(lines) < 2:
                 return ({'message': 'Not enough data to make a recommendation.'}, None)

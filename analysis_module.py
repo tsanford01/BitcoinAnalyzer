@@ -31,7 +31,7 @@ def analysis_pipeline():
     actual_price_changes = get_actual_price_changes(historical_data)
 
     # Evaluate the recommendation
-    evaluation = evaluate_recommendation(recommendation, actual_price_changes)
+    evaluation = evaluate_recommendation(current_price)
 
     # Track the performance
     past_recommendations = []

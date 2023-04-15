@@ -20,7 +20,7 @@ def evaluate_recommendation():
         # calculate the percentage change
         percentage_change = (current_price - opening_price) / opening_price * 100
         # save the result to a file
-        with open('recommendation_evaluations.txt', 'a') as file:
+        with open('data/recommendation_evaluations.txt', 'a') as file:
             file.write(f'{date} {percentage_change:.2f} {recommendation_str}\n')
         return ({"message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent.'}, None)
     except Exception as e:

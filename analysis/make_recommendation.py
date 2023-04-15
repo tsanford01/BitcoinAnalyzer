@@ -1,45 +1,67 @@
 # analysis\make_recommendation.py
 import requests
-
+import time
 from analysis.evaluate_recommendation import evaluate_recommendation
 
 
-def get_price_trend(days):
-    # Get the price data from the last `days` days
-    bitcoin_price = requests.get(
-        f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days={days}').json()
-    # Calculate the average price over the last `days` days
-    average_price = sum([price[1] for price in bitcoin_price['prices']]) / len(bitcoin_price['prices'])
-    # Calculate the current price of Bitcoin
-    current_price = \
-        requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').json()['bitcoin'][
-            'usd']
-    # Calculate the percentage difference between the average price and the current price
-    percentage_difference = (current_price - average_price) / average_price * 100
-    return percentage_difference
+def get_price_trend(days, current_price):
+    while True:
+        try:
+            # Get the price data from the last `days` days
+            response = requests.get(
+                f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days={days}')
+
+            # Handle rate limiting (status code 429)
+            if response.status_code == 429:
+                time.sleep(60)  # Wait for 60 seconds before retrying
+                continue
+
+            bitcoin_price = response.json()
+
+            # Calculate the average price over the last `days` days
+            average_price = sum([price[1] for price in bitcoin_price['prices']]) / len(bitcoin_price['prices'])
+
+            # Calculate the percentage difference between the average price and the current price
+            percentage_difference = (current_price - average_price) / average_price * 100
+
+            return percentage_difference
+
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
 
 
 def get_market_sentiment():
-    # get the sentiment of the market
-    response = requests.get('https://api.coingecko.com/api/v3/coins/bitcoin/sentiment')
-    if response.status_code == requests.codes.ok:
-        sentiment = response.json()['sentiment_votes_up_percentage']
-    return sentiment
+    while True:
+        try:
+            # Get the sentiment of the market
+            response = requests.get('https://api.coingecko.com/api/v3/coins/bitcoin/sentiment')
+
+            # Handle rate limiting (status code 429)
+            if response.status_code == 429:
+                time.sleep(60)  # Wait for 60 seconds before retrying
+                continue
+
+            # Check if the response status code is OK (200)
+            if response.status_code == requests.codes.ok:
+                sentiment = response.json()['sentiment_votes_up_percentage']
+                return sentiment
+            else:
+                raise Exception(f"Error: Received status code {response.status_code} from API.")
+
+        except Exception as e:
+            print(f"Error: {e}")
+            return None
 
 
-def make_recommendation():
+def make_recommendation(current_price):
     try:
         # Evaluate the most recent recommendation
-        result, error = evaluate_recommendation()
+        result, error = evaluate_recommendation(current_price)
         if error is not None:
             return None, error
-        # get the current price of Bitcoin
-        current_price = \
-            requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd').json()[
-                'bitcoin'][
-                'usd']
         # get the percentage change since the last recommendation
-        with open('recommendation_evaluations.txt', 'r') as file:
+        with open('data/recommendation_evaluations.txt', 'r') as file:
             lines = file.readlines()
             if len(lines) < 2:
                 return {'message': 'Not enough data to make a recommendation.'}, None

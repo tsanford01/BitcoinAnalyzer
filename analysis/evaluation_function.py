@@ -30,7 +30,7 @@ def evaluate_performance(historical_data):
         total_profit_loss_percent = total_profit_loss / df['Cost'].sum() * 100
 
         # Write the results to a file
-        with open('performance_evaluation.txt', 'w') as file:
+        with open('data/performance_evaluation.txt', 'w') as file:
             file.write(f'Total Profit/Loss: {total_profit_loss}\n'
                        f'Total Profit/Loss Percentage: {total_profit_loss_percent:.2f}%\n\n'
                        f'Individual Trades:\n'
@@ -43,7 +43,7 @@ def evaluate_performance(historical_data):
 
 def get_last_percentage_change():
     # Get the percentage change since the last recommendation
-    with open('recommendation_evaluations.txt', 'r') as file:
+    with open('data/recommendation_evaluations.txt', 'r') as file:
         lines = file.readlines()
     if len(lines) < 2:
         return 0.0
