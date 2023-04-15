@@ -103,5 +103,5 @@ def make_recommendation(current_price):
         return {'message': f'Error: {e}'}, None
 
 
-if __name__ == '__main__':
-    make_recommendation()
+# if __name__ == '__main__':
+#     make_recommendation()

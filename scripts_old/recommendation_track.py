@@ -1,13 +1,13 @@
 import time
-from make_recommendation import make_recommendation
-import requests
 from datetime import datetime
+import requests
+
+
 def track_performance():
     try:
         # set up the data file
         with open('performance.csv', 'a+') as file:
-            file.write('Timestamp,Trade,Price,Amount,Cost,Average Cost,Profit/Loss
-')
+            file.write('Timestamp,Trade,Price,Amount,Cost,Average Cost,Profit/Loss')
         # loop continuously
         while True:
             # wait 15 minutes
@@ -36,15 +36,13 @@ def track_performance():
                 cost = amount * current_price
                 profit_loss = (last_amount * current_price - last_cost) + (amount * last_price - cost)
                 with open('performance.csv', 'a') as file:
-                    file.write(f'{datetime.now()},sell,{current_price},{amount},{cost},{(last_cost + cost) / (last_amount + amount)},{profit_loss}
-')
+                    file.write(f'{datetime.now()},sell,{current_price},{amount},{cost},{(last_cost + cost) / (last_amount + amount)},{profit_loss}')
             elif percentage_change < -5:
                 amount = 0.1  # arbitrary amount for testing purposes
                 cost = amount * current_price
                 profit_loss = (last_amount * current_price - last_cost) + (amount * last_price - cost)
                 with open('performance.csv', 'a') as file:
-                    file.write(f'{datetime.now()},buy,{current_price},{amount},{cost},{(last_cost + cost) / (last_amount + amount)},{profit_loss}
-')
+                    file.write(f'{datetime.now()},buy,{current_price},{amount},{cost},{(last_cost + cost) / (last_amount + amount)},{profit_loss}')
             else:
                 continue
     except KeyboardInterrupt:
@@ -52,5 +50,5 @@ def track_performance():
     except Exception as e:
         return ({'message': f'Error: {e}'}, None)
 
-if __name__ == '__main__':
-    track_performance()
+# if __name__ == '__main__':
+#     track_performance()
