@@ -51,7 +51,5 @@ def track_performance(evaluation, past_recommendations, current_price):
     except Exception as e:
         return {'message': f'Error: {e}'}, None
 
-
-
-if __name__ == '__main__':
-    track_performance()
+# if __name__ == '__main__':
+#     track_performance()

@@ -52,6 +52,6 @@ def get_last_percentage_change():
     return previous_percentage_change
 
 
-if __name__ == '__main__':
-    evaluate_performance()
-    get_last_percentage_change()
+# if __name__ == '__main__':
+#     evaluate_performance()
+#     get_last_percentage_change()
