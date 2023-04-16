@@ -3,7 +3,7 @@
 # Other necessary imports
 import pandas as pd
 
-from analysis.evaluate_recommendation import evaluate_recommendation
+from analysis.evaluate_recommendation import evaluate_recommendation, get_actual_price_changes
 # Import necessary functions from the 'analysis' module
 from analysis.evaluation_function import evaluate_performance, get_last_percentage_change
 from analysis.make_recommendation import make_recommendation, get_price_trend, get_market_sentiment
@@ -25,7 +25,7 @@ def analysis_pipeline():
     market_sentiment = get_market_sentiment(historical_data)
 
     # Make a recommendation based on indicators
-    recommendation = make_recommendation()
+    recommendation = make_recommendation(current_price)
 
     # Get actual price changes
     actual_price_changes = get_actual_price_changes(historical_data)
