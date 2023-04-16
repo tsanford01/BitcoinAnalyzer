@@ -151,6 +151,7 @@ class RecommendationApp:
         self.update_countdown()
 
         self.price_schedule = None  # Initialize the price schedule attribute
+        self.analysis_loop_schedule = None  # Initialize the analysis loop schedule attribute
 
     def update_price_schedule(self, new_schedule):
         # Update the price schedule with the new schedule provided
@@ -177,14 +178,18 @@ class RecommendationApp:
         # Start the analysis loop in a separate thread
         analysis_thread = Thread(target=self.analysis_loop)
         analysis_thread.start()
-        # Schedule the update_current_price and analysis_loop with the user-defined frequency
-        self.update_price_schedule = self.root.after(self.update_price_frequency * 1000, self.update_current_price)
+        # Start the update_current_price with the user-defined frequency
+        self.update_price_schedule = self.root.after(self.update_price_frequency * 100, self.update_current_price)
+        # Schedule the analysis_loop with the user-defined frequency
         self.analysis_loop_schedule = self.root.after(self.analysis_loop_frequency * 1000, self.analysis_loop)
 
     def stop_analysis(self):
         # Set the running flag to False to stop the analysis loop
         self.is_running = False
         self.status_text.set("Analysis stopped.")
+        # Cancel the scheduled updates when stopping the analysis
+        self.root.after_cancel(self.update_price_schedule)
+        self.root.after_cancel(self.analysis_loop_schedule)  # Now this attribute exists
 
     def view_history(self):
         # Clear the history frame before displaying the history
@@ -399,7 +404,7 @@ class RecommendationApp:
 
             # Restart update_current_price and analysis_loop with the new frequency
             self.root.after_cancel(self.update_price_schedule)
-            self.root.after_cancel(self.analysis_loop_schedule)
+            self.root.after_cancel(self.analysis_loop_schedule)  # Now this attribute exists
             self.update_current_price()
             self.analysis_loop()
 

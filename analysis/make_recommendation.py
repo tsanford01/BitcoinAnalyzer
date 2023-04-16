@@ -2,6 +2,7 @@
 import requests
 import time
 from analysis.evaluate_recommendation import evaluate_recommendation
+import datetime
 
 
 def get_price_trend(days, current_price):
@@ -60,47 +61,44 @@ def make_recommendation(current_price):
         result, error = evaluate_recommendation(current_price)
         if error is not None:
             return None, error
-        # get the percentage change since the last recommendation
-        with open('data/recommendation_evaluations.txt', 'r') as file:
-            lines = file.readlines()
-            if len(lines) < 2:
-                return {'message': 'Not enough data to make a recommendation.'}, None
-            last_line = lines[-2].strip()
-            previous_percentage_change = float(last_line.split(' ')[1])
-        # calculate the percentage change since the last recommendation
-        percentage_change = (current_price - previous_percentage_change) / previous_percentage_change * 100
-        # calculate the long-term trend over the last 7 days
-        long_term_trend = get_price_trend(7)
-        # get the market sentiment
+        previous_price = float(result['previous_price']) # Get the previous price from the result
+        # Calculate the percentage change since the last recommendation
+        percentage_change = ((current_price - previous_price) / previous_price) * 100
+        # Calculate the long-term trend over the last 7 days
+        long_term_trend = get_price_trend(7, current_price)
+        # Get the market sentiment
         sentiment = get_market_sentiment()
 
         # Calculate the confidence level based on percentage change, long-term trend, and market sentiment
-        confidence_level = abs(percentage_change) + abs(long_term_trend) + sentiment
+        confidence_level = (abs(percentage_change) + abs(long_term_trend) + sentiment) / 3
         confidence_level = min(confidence_level, 100)  # Cap the confidence level at 100
-
-        # Define arbitrary confidence levels for the examples
-        high_confidence = 85
-        low_confidence = 50
 
         # Use the information to make a recommendation
         if percentage_change > 5 and long_term_trend > 2 and sentiment > 60:
             message = (f'Bitcoin price has increased by {percentage_change:.2f}% since the last recommendation, '
                        f'long-term trend is {long_term_trend:.2f}% positive, and market sentiment is {sentiment:.2f}% '
                        f'positive. It is recommended to sell.')
-            confidence_level = high_confidence
         elif percentage_change < -5 and long_term_trend < -2 and sentiment < 40:
             message = (f'Bitcoin price has decreased by {abs(percentage_change):.2f}% since the last recommendation, '
                        f'long-term trend is {long_term_trend:.2f}% negative, and market sentiment is {sentiment:.2f}% '
                        f'negative. It is recommended to buy.')
-            confidence_level = high_confidence
         else:
             message = 'No significant change in Bitcoin price since the last recommendation.'
-            confidence_level = low_confidence
+
+        # Write the timestamp and recommendation message to the file
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        recommendation_entry = f'{timestamp} {message}'
+        with open('data/recommendations.txt', 'a') as file:
+            file.write(recommendation_entry + '\n')
 
         # Return a dictionary containing both the message and the confidence level
         return {'message': message, 'confidence_level': confidence_level}, None
     except Exception as e:
         return {'message': f'Error: {e}'}, None
+
+
+
+
 
 
 # if __name__ == '__main__':

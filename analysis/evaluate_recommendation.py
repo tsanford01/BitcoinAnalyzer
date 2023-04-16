@@ -116,50 +116,51 @@ end_date = datetime.now().strftime('%Y-%m-%d')
 
 # Fetch data using the selected start and end dates
 actual_price_changes = get_actual_price_changes(start_date, end_date)
+
+
 # print(actual_price_changes)
 
 
 def evaluate_recommendation(current_price):
     try:
-        # Define the file path for the recommendations.txt file (including the 'data' directory)
         recommendations_file_path = 'data/recommendations.txt'
         evaluations_file_path = 'data/recommendation_evaluations.txt'
 
         # Get the most recent recommendation from our file
         with open(recommendations_file_path, 'r') as file:
             lines = file.readlines()
+            if not lines:  # Check if the lines list is empty
+                return {"message": "Error: No recommendations found in the file."}, None
             last_line = lines[-1].strip()
-        # Extract the date and the recommendation from the line
+        print(f"DEBUG: Contents of recommendations.txt file: {lines}")
         date_str, recommendation_str = last_line.split('Bitcoin price has', 1)
         recommendation_str = 'Bitcoin price has' + recommendation_str
         date = dateutil.parser.parse(date_str.strip())
 
-        # Get the Bitcoin price at the time of the recommendation
         one_hour_ago = (date - datetime.timedelta(hours=1)).strftime('%s')
         while True:
             response = requests.get(f'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range'
                                     f'?vs_currency=usd&from={one_hour_ago}&to=9999999999')
-            # Handle rate limiting (status code 429)
             if response.status_code == 429:
-                time.sleep(60)  # Wait for 60 seconds before retrying
+                time.sleep(60)
                 continue
             if response.ok:
                 historical_data = response.json()
-                opening_price = historical_data['prices'][0][1]
+                print(f"DEBUG: Historical data from API: {historical_data}")  # Debug line
+                previous_price = historical_data['prices'][0][1]
                 break
             else:
                 raise Exception(f"Error: Received status code {response.status_code} from API.")
 
-        # Calculate the percentage change
-        percentage_change = (current_price - opening_price) / opening_price * 100
+        percentage_change = (current_price - previous_price) / previous_price * 100
 
-        # Save the result to a file
         with open(evaluations_file_path, 'a') as file:
             file.write(f'{date} {percentage_change:.2f} {recommendation_str}')
 
         return {
-            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent.'}, None
+            "previous_price": previous_price,
+            "message": f'The percentage change since the last recommendation was {percentage_change:.2f} percent.'
+        }, None
     except Exception as e:
         return {"message": "Error: {}".format(str(e))}, None
-
 
